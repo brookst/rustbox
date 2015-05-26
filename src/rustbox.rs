@@ -1,6 +1,3 @@
-#![feature(libc)]
-#![feature(optin_builtin_traits)]
-
 extern crate gag;
 extern crate libc;
 extern crate num;
@@ -15,6 +12,7 @@ use std::fmt;
 use std::io;
 use std::char;
 use std::default::Default;
+use std::marker::PhantomData;
 
 use num::FromPrimitive;
 use termbox::RawEvent;
@@ -213,10 +211,13 @@ impl FromPrimitive for InitError {
 pub struct RustBox {
    // We only bother to redirect stderr for the moment, since it's used for panic!
    _stderr: Option<Hold>,
+   // Hack to break Send trait
+   m: PhantomData<*mut ()>,
 }
 
 // Termbox is not thread safe
-impl !Send for RustBox {}
+// But negative trait bounds are not in the rust releases yet - see above
+// impl !Send for RustBox {}
 
 #[derive(Clone, Copy,Debug)]
 pub struct InitOptions {
@@ -272,6 +273,7 @@ impl RustBox {
         // Create the RustBox.
         let rb = unsafe { match termbox::tb_init() {
             0 => RustBox {
+                m: PhantomData,
                 _stderr: stderr,
             },
             res => {
